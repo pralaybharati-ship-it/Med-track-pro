@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Hospital } from '../types';
 
@@ -10,6 +9,7 @@ interface SidebarProps {
   canInstall: boolean;
   onInstall: () => void;
   isOnline: boolean;
+  patientCount: number;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -19,7 +19,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onAddClick, 
   canInstall, 
   onInstall,
-  isOnline
+  isOnline,
+  patientCount
 }) => {
   const [copied, setCopied] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -79,6 +80,14 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="flex-1 px-6 overflow-y-auto">
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 mb-6">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Database Stats</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold text-gray-900">{patientCount}</span>
+            <span className="text-xs text-gray-500 font-medium">Patients Managed</span>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Hospitals</h3>
           <button 

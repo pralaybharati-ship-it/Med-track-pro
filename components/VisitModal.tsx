@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PatientVisit, Hospital } from '../types';
 import { getClinicalInsights } from '../geminiService';
 
@@ -9,6 +8,7 @@ interface VisitModalProps {
   onSave: (visit: PatientVisit) => void;
   hospitals: Hospital[];
   initialData: PatientVisit | null;
+  allVisits: PatientVisit[];
   defaultHospitalId?: string;
   isOnline?: boolean;
 }
@@ -19,6 +19,7 @@ const VisitModal: React.FC<VisitModalProps> = ({
   onSave, 
   hospitals, 
   initialData, 
+  allVisits,
   defaultHospitalId,
   isOnline = true
 }) => {
@@ -34,6 +35,17 @@ const VisitModal: React.FC<VisitModalProps> = ({
   });
 
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Extract unique patient details for autocomplete
+  const patientSuggestions = useMemo(() => {
+    const names = new Set<string>();
+    const phones = new Set<string>();
+    allVisits.forEach(v => {
+      if (v.patientName) names.add(v.patientName);
+      if (v.phoneNumber) phones.add(v.phoneNumber);
+    });
+    return { names: Array.from(names), phones: Array.from(phones) };
+  }, [allVisits]);
 
   useEffect(() => {
     if (initialData) {
@@ -95,6 +107,13 @@ const VisitModal: React.FC<VisitModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+          <datalist id="patient-names">
+            {patientSuggestions.names.map(name => <option key={name} value={name} />)}
+          </datalist>
+          <datalist id="patient-phones">
+            {patientSuggestions.phones.map(phone => <option key={phone} value={phone} />)}
+          </datalist>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-500 uppercase">Hospital</label>
@@ -127,6 +146,7 @@ const VisitModal: React.FC<VisitModalProps> = ({
               <input
                 type="text"
                 required
+                list="patient-names"
                 placeholder="John Doe"
                 value={formData.patientName}
                 onChange={e => setFormData({ ...formData, patientName: e.target.value })}
@@ -138,6 +158,7 @@ const VisitModal: React.FC<VisitModalProps> = ({
               <input
                 type="tel"
                 required
+                list="patient-phones"
                 placeholder="+1 234 567 890"
                 value={formData.phoneNumber}
                 onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })}

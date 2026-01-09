@@ -22,12 +22,12 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [sortField, setSortField] = useState<SortField>('visitDate');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   useEffect(() => {
-    // Check if installed
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
       setIsStandalone(true);
     }
@@ -64,13 +64,14 @@ const App: React.FC = () => {
     if (storedVisits) setVisits(JSON.parse(storedVisits));
   }, []);
 
+  // Sync to local storage with visual indicator
   useEffect(() => {
+    setIsSaving(true);
     localStorage.setItem(STORAGE_KEY_HOSPITALS, JSON.stringify(hospitals));
-  }, [hospitals]);
-
-  useEffect(() => {
     localStorage.setItem(STORAGE_KEY_VISITS, JSON.stringify(visits));
-  }, [visits]);
+    const timer = setTimeout(() => setIsSaving(false), 500);
+    return () => clearTimeout(timer);
+  }, [hospitals, visits]);
 
   const handleInstallApp = async () => {
     if (!deferredPrompt) return;
@@ -105,6 +106,33 @@ const App: React.FC = () => {
     setIsVisitModalOpen(true);
   };
 
+  const exportToCSV = () => {
+    if (visits.length === 0) return alert("No records to export.");
+    
+    const headers = ["Visit Date", "Hospital", "Patient Name", "Phone", "Disease", "Findings", "Next Visit", "Comments"];
+    const rows = visits.map(v => [
+      v.visitDate,
+      hospitals.find(h => h.id === v.hospitalId)?.name || 'Unknown',
+      v.patientName,
+      v.phoneNumber,
+      v.disease,
+      v.findings.replace(/\n/g, ' '),
+      v.nextVisitDate || '',
+      v.comments.replace(/\n/g, ' ')
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `medtrack_records_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredVisits = useMemo(() => {
     return visits
       .filter(v => {
@@ -121,6 +149,11 @@ const App: React.FC = () => {
         return 0;
       });
   }, [visits, selectedHospitalId, searchQuery, sortField, sortDirection]);
+
+  const uniquePatientsCount = useMemo(() => {
+    const phones = new Set(visits.map(v => v.phoneNumber));
+    return phones.size;
+  }, [visits]);
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden relative">
@@ -153,6 +186,7 @@ const App: React.FC = () => {
           canInstall={!!deferredPrompt}
           onInstall={handleInstallApp}
           isOnline={isOnline}
+          patientCount={uniquePatientsCount}
         />
       </div>
       
@@ -162,13 +196,25 @@ const App: React.FC = () => {
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
               <i className="fas fa-bars"></i>
             </button>
-            {!isOnline && (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold uppercase rounded-full border border-amber-200">
-                <i className="fas fa-wifi-slash"></i> Offline Mode
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {!isOnline && (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold uppercase rounded-full border border-amber-200">
+                  <i className="fas fa-wifi-slash"></i> Offline
+                </span>
+              )}
+              {isSaving && (
+                <span className="flex items-center gap-1 text-[10px] text-indigo-500 font-medium italic animate-pulse">
+                   <i className="fas fa-sync-alt fa-spin"></i> Saving...
+                </span>
+              )}
+            </div>
           </div>
-          <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} onAddVisit={() => { setEditingVisit(null); setIsVisitModalOpen(true); }} />
+          <Header 
+            searchQuery={searchQuery} 
+            onSearchChange={setSearchQuery} 
+            onAddVisit={() => { setEditingVisit(null); setIsVisitModalOpen(true); }} 
+            onExport={exportToCSV}
+          />
         </header>
         
         <main className="flex-1 p-3 lg:p-6 overflow-auto">
@@ -189,7 +235,16 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <VisitModal isOpen={isVisitModalOpen} onClose={() => setIsVisitModalOpen(false)} onSave={handleSaveVisit} hospitals={hospitals} initialData={editingVisit} defaultHospitalId={selectedHospitalId !== 'all' ? selectedHospitalId : hospitals[0]?.id} isOnline={isOnline} />
+      <VisitModal 
+        isOpen={isVisitModalOpen} 
+        onClose={() => setIsVisitModalOpen(false)} 
+        onSave={handleSaveVisit} 
+        hospitals={hospitals} 
+        initialData={editingVisit} 
+        defaultHospitalId={selectedHospitalId !== 'all' ? selectedHospitalId : hospitals[0]?.id} 
+        isOnline={isOnline} 
+        allVisits={visits}
+      />
       <HospitalModal isOpen={isHospitalModalOpen} onClose={() => setIsHospitalModalOpen(false)} onSave={handleAddHospital} />
 
       <button onClick={() => { setEditingVisit(null); setIsVisitModalOpen(true); }} className="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center text-xl z-30 active:scale-90 transition-transform">
