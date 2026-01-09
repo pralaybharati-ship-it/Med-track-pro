@@ -1,7 +1,8 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Fix: Initialize GoogleGenAI with a named parameter and use process.env.API_KEY directly as per guidelines.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getClinicalInsights = async (disease: string, findings: string) => {
   try {
@@ -13,10 +14,11 @@ export const getClinicalInsights = async (disease: string, findings: string) => 
       
       Format the response as a short bulleted list of suggested doctor's comments.`,
       config: {
-        maxOutputTokens: 200,
+        // Fix: Removed maxOutputTokens to avoid reaching token limits and follow recommendations.
         temperature: 0.7,
       },
     });
+    // Fix: Directly access the .text property of the response object.
     return response.text || "No insights available.";
   } catch (error) {
     console.error("Gemini Error:", error);
