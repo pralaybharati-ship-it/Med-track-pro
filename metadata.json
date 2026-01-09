@@ -1,0 +1,5 @@
+{
+  "name": "MedTrack Pro",
+  "description": "A high-performance patient management and hospital visit tracker designed for healthcare professionals managing multiple clinic locations with spreadsheet-style data management and AI-powered diagnosis insights.",
+  "requestFramePermissions": []
+}
