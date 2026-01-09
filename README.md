@@ -1,20 +1,36 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# MedTrack Pro - Local Setup Guide
 
-# Run and deploy your AI Studio app
+Follow these steps to run the Patient Management & Hospital Visit Tracker on your local machine.
 
-This contains everything you need to run your app locally.
+## Prerequisites
+- **Node.js**: Ensure you have Node.js (v18 or higher) installed.
+- **NPM**: Comes bundled with Node.js.
 
-View your app in AI Studio: https://ai.studio/apps/drive/11ffMRfXScrcH5MKa5h13HwQOSHSXxhn0
+## Installation
 
-## Run Locally
+1. **Install Dependencies**:
+   Open your terminal in the project root and run:
+   ```bash
+   npm install
+   ```
 
-**Prerequisites:**  Node.js
+2. **API Key Setup**:
+   The API key is already configured in the `.env` file for you. If you need to change it, update the `API_KEY` value in `.env`.
 
+## Running the App
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. **Start Development Servers**:
+   Run the following command to start both the Frontend (Vite) and the Backend (Node.js/Express):
+   ```bash
+   npm run dev
+   ```
+
+2. **Access the App**:
+   - **Frontend**: [http://localhost:3000](http://localhost:3000)
+   - **Backend API**: [http://localhost:3001/api/data](http://localhost:3001/api/data)
+
+## Features
+- **Data Persistence**: Your data is saved to `db.json` in the root folder.
+- **AI Insights**: Uses Gemini AI to provide clinical suggestions based on diagnosis.
+- **PWA Ready**: Works offline via Service Workers and can be "Installed" to your desktop.
+- **CSV Export**: Export your entire patient database to a spreadsheet-ready format.

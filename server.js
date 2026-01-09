@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import fs from 'node:fs/promises';
@@ -18,8 +17,10 @@ app.use(express.json());
 const initDb = async () => {
   try {
     await fs.access(DB_PATH);
+    console.log('Database file found.');
   } catch {
-    await fs.writeFile(DB_PATH, JSON.stringify({ hospitals: [], visits: [] }));
+    console.log('Database file not found. Creating new db.json...');
+    await fs.writeFile(DB_PATH, JSON.stringify({ hospitals: [], visits: [] }, null, 2));
   }
 };
 
@@ -52,6 +53,7 @@ if (process.env.NODE_ENV === 'production') {
 
 initDb().then(() => {
   app.listen(PORT, () => {
-    console.log(`Node.js server running on http://localhost:${PORT}`);
+    console.log(`\x1b[32m✔ Node.js Backend Server running at http://localhost:${PORT}\x1b[0m`);
+    console.log(`\x1b[36mℹ Data persistence enabled via ${DB_PATH}\x1b[0m`);
   });
 });
