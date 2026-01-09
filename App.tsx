@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSynced, setIsSynced] = useState(false);
   
   const [sortField, setSortField] = useState<SortField>('visitDate');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -48,30 +49,71 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // Initial Data Load from Backend with Local Fallback
   useEffect(() => {
-    const storedHospitals = localStorage.getItem(STORAGE_KEY_HOSPITALS);
-    const storedVisits = localStorage.getItem(STORAGE_KEY_VISITS);
-    
-    if (storedHospitals) setHospitals(JSON.parse(storedHospitals));
-    else {
-      const initialHospitals = [
-        { id: '1', name: 'City Central Hospital', location: 'Main Street', createdAt: new Date().toISOString() },
-        { id: '2', name: 'West Side Clinic', location: 'Business District', createdAt: new Date().toISOString() }
-      ];
-      setHospitals(initialHospitals);
-      localStorage.setItem(STORAGE_KEY_HOSPITALS, JSON.stringify(initialHospitals));
-    }
-    if (storedVisits) setVisits(JSON.parse(storedVisits));
+    const loadInitialData = async () => {
+      try {
+        const response = await fetch('/api/data');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.hospitals.length > 0) setHospitals(data.hospitals);
+          if (data.visits.length > 0) setVisits(data.visits);
+          setIsSynced(true);
+          return;
+        }
+      } catch (err) {
+        console.warn('Backend unavailable, falling back to local storage.');
+      }
+
+      // Fallback to local storage if backend fails or is offline
+      const storedHospitals = localStorage.getItem(STORAGE_KEY_HOSPITALS);
+      const storedVisits = localStorage.getItem(STORAGE_KEY_VISITS);
+      
+      if (storedHospitals) setHospitals(JSON.parse(storedHospitals));
+      else {
+        const initialHospitals = [
+          { id: '1', name: 'City Central Hospital', location: 'Main Street', createdAt: new Date().toISOString() },
+          { id: '2', name: 'West Side Clinic', location: 'Business District', createdAt: new Date().toISOString() }
+        ];
+        setHospitals(initialHospitals);
+      }
+      if (storedVisits) setVisits(JSON.parse(storedVisits));
+    };
+
+    loadInitialData();
   }, []);
 
-  // Sync to local storage with visual indicator
+  // Sync to backend and local storage
   useEffect(() => {
+    if (hospitals.length === 0 && visits.length === 0) return;
+
     setIsSaving(true);
     localStorage.setItem(STORAGE_KEY_HOSPITALS, JSON.stringify(hospitals));
     localStorage.setItem(STORAGE_KEY_VISITS, JSON.stringify(visits));
-    const timer = setTimeout(() => setIsSaving(false), 500);
+
+    const syncWithBackend = async () => {
+      if (!isOnline) {
+        setIsSaving(false);
+        setIsSynced(false);
+        return;
+      }
+      try {
+        const response = await fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hospitals, visits })
+        });
+        if (response.ok) setIsSynced(true);
+      } catch (err) {
+        setIsSynced(false);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    const timer = setTimeout(syncWithBackend, 1000); // Debounce sync
     return () => clearTimeout(timer);
-  }, [hospitals, visits]);
+  }, [hospitals, visits, isOnline]);
 
   const handleInstallApp = async () => {
     if (!deferredPrompt) return;
@@ -197,11 +239,15 @@ const App: React.FC = () => {
               <i className="fas fa-bars"></i>
             </button>
             <div className="flex items-center gap-2">
-              {!isOnline && (
+              {!isOnline ? (
                 <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold uppercase rounded-full border border-amber-200">
                   <i className="fas fa-wifi-slash"></i> Offline
                 </span>
-              )}
+              ) : isSynced ? (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase rounded-full border border-emerald-200">
+                  <i className="fas fa-cloud"></i> Synced
+                </span>
+              ) : null}
               {isSaving && (
                 <span className="flex items-center gap-1 text-[10px] text-indigo-500 font-medium italic animate-pulse">
                    <i className="fas fa-sync-alt fa-spin"></i> Saving...
