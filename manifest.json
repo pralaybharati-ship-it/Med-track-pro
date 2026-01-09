@@ -1,25 +1,20 @@
 
 {
-  "name": "MedTrack Pro - Clinical Tracker",
+  "name": "MedTrack Pro - Clinic Assistant",
   "short_name": "MedTrack",
-  "description": "Professional patient management and visit tracker for clinical use.",
+  "description": "Professional offline patient tracker and clinical management tool.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#4f46e5",
   "theme_color": "#4f46e5",
   "orientation": "portrait",
+  "categories": ["medical", "productivity"],
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2966/2966327.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/2966/2966327.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/192/2966/2966327.png",
