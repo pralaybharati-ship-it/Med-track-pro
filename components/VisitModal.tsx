@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { PatientVisit, Hospital } from '../types';
-import { getClinicalInsights } from '../geminiService';
+import { getClinicalInsights } from './geminiService';
 
 interface VisitModalProps {
   isOpen: boolean;
