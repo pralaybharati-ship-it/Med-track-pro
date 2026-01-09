@@ -23,92 +23,50 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showIosTip, setShowIosTip] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSynced, setIsSynced] = useState(false);
   
   const [sortField, setSortField] = useState<SortField>('visitDate');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
+  // Sync Online Status & Detect PWA Mode
   useEffect(() => {
     const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
     setIsStandalone(!!checkStandalone);
 
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', () => setIsOnline(true));
+    window.addEventListener('offline', () => setIsOnline(false));
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
     });
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
   }, []);
 
+  // Load Data from Mobile Storage (Local)
   useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const response = await fetch('/api/data');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.hospitals?.length > 0) setHospitals(data.hospitals);
-          if (data.visits?.length > 0) setVisits(data.visits);
-          setIsSynced(true);
-          return;
-        }
-      } catch (err) {
-        console.warn('Backend offline, using local storage.');
-      }
-
-      const storedHospitals = localStorage.getItem(STORAGE_KEY_HOSPITALS);
-      const storedVisits = localStorage.getItem(STORAGE_KEY_VISITS);
-      
-      if (storedHospitals) setHospitals(JSON.parse(storedHospitals));
-      else {
-        setHospitals([
-          { id: '1', name: 'City Central Hospital', location: 'Main Street', createdAt: new Date().toISOString() },
-          { id: '2', name: 'West Side Clinic', location: 'Business District', createdAt: new Date().toISOString() }
-        ]);
-      }
-      if (storedVisits) setVisits(JSON.parse(storedVisits));
-    };
-
-    loadInitialData();
+    const storedHospitals = localStorage.getItem(STORAGE_KEY_HOSPITALS);
+    const storedVisits = localStorage.getItem(STORAGE_KEY_VISITS);
+    
+    if (storedHospitals) {
+      setHospitals(JSON.parse(storedHospitals));
+    } else {
+      // Default initial state
+      setHospitals([
+        { id: '1', name: 'My First Clinic', location: 'Main Branch', createdAt: new Date().toISOString() }
+      ]);
+    }
+    
+    if (storedVisits) {
+      setVisits(JSON.parse(storedVisits));
+    }
   }, []);
 
+  // Save Data to Mobile Storage whenever it changes
   useEffect(() => {
-    if (hospitals.length === 0 && visits.length === 0) return;
-    setIsSaving(true);
-    localStorage.setItem(STORAGE_KEY_HOSPITALS, JSON.stringify(hospitals));
-    localStorage.setItem(STORAGE_KEY_VISITS, JSON.stringify(visits));
-
-    const syncWithBackend = async () => {
-      if (!isOnline) {
-        setIsSaving(false);
-        setIsSynced(false);
-        return;
-      }
-      try {
-        const response = await fetch('/api/data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hospitals, visits })
-        });
-        if (response.ok) setIsSynced(true);
-      } catch (err) {
-        setIsSynced(false);
-      } finally {
-        setIsSaving(false);
-      }
-    };
-
-    const timer = setTimeout(syncWithBackend, 1500);
-    return () => clearTimeout(timer);
-  }, [hospitals, visits, isOnline]);
+    if (hospitals.length > 0 || visits.length > 0) {
+      localStorage.setItem(STORAGE_KEY_HOSPITALS, JSON.stringify(hospitals));
+      localStorage.setItem(STORAGE_KEY_VISITS, JSON.stringify(visits));
+    }
+  }, [hospitals, visits]);
 
   const handleInstallApp = async () => {
     if (deferredPrompt) {
@@ -116,13 +74,9 @@ const App: React.FC = () => {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') setDeferredPrompt(null);
     } else {
-      // Logic for iOS or desktop where beforeinstallprompt isn't available
       const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      if (isIos) {
-        setShowIosTip(true);
-      } else {
-        alert("To install, use your browser menu and select 'Install' or 'Add to Home Screen'.");
-      }
+      if (isIos) setShowIosTip(true);
+      else alert("To download: Tap the 3-dots in Chrome and select 'Install app' or 'Add to Home Screen'.");
     }
   };
 
@@ -155,38 +109,38 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden relative font-sans">
-      {/* Mobile Download Prompt */}
+      {/* High-Visibility Install Banner (Visible in mobile browser only) */}
       {!isStandalone && (
-        <div className="lg:hidden fixed top-0 inset-x-0 z-[60] bg-gradient-to-r from-indigo-600 to-indigo-700 p-3.5 flex items-center justify-between text-white shadow-2xl">
+        <div className="fixed top-0 inset-x-0 z-[70] bg-indigo-600 p-4 flex items-center justify-between text-white shadow-xl lg:hidden">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-md">
-              <i className="fas fa-hospital-user"></i>
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
+              <i className="fas fa-mobile-screen-button text-lg"></i>
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 leading-none">MedTrack Pro</p>
-              <p className="text-xs font-bold">Download for Offline Use</p>
+              <p className="text-xs font-black uppercase tracking-widest opacity-80">MedTrack Pro</p>
+              <p className="text-sm font-bold">Install as Mobile App</p>
             </div>
           </div>
           <button 
             onClick={handleInstallApp}
-            className="bg-white text-indigo-700 px-5 py-1.5 rounded-full text-xs font-black shadow-lg active:scale-95 transition-transform"
+            className="bg-white text-indigo-600 px-6 py-2 rounded-full text-xs font-black shadow-lg active:scale-90 transition-transform"
           >
-            INSTALL
+            INSTALL NOW
           </button>
         </div>
       )}
 
-      {/* iOS Installation Tip */}
+      {/* iOS Instruction Dialog */}
       {showIosTip && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowIosTip(false)}>
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm mb-4 animate-bounce-in shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="text-center">
-              <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-mobile-alt text-xl"></i>
+              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-share-from-square text-2xl"></i>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Install on iPhone</h3>
-              <p className="text-sm text-gray-500 mb-6">Tap the <span className="inline-block p-1 bg-gray-100 rounded mx-1"><i className="fas fa-external-link-alt text-blue-500"></i> Share</span> button in Safari and select <span className="font-bold">"Add to Home Screen"</span> to download.</p>
-              <button onClick={() => setShowIosTip(false)} className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold">Got it!</button>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Install on iPhone</h3>
+              <p className="text-sm text-gray-500 mb-6">Tap the <strong>Share</strong> icon in Safari and select <br/><span className="font-bold text-indigo-600">"Add to Home Screen"</span>.</p>
+              <button onClick={() => setShowIosTip(false)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg">Close</button>
             </div>
           </div>
         </div>
@@ -202,7 +156,7 @@ const App: React.FC = () => {
           selectedId={selectedHospitalId} 
           onSelect={(id) => { setSelectedHospitalId(id); setIsSidebarOpen(false); }}
           onAddClick={() => setIsHospitalModalOpen(true)}
-          canInstall={true}
+          canInstall={!isStandalone}
           onInstall={handleInstallApp}
           isOnline={isOnline}
           patientCount={new Set(visits.map(v => v.phoneNumber)).size}
@@ -210,38 +164,30 @@ const App: React.FC = () => {
       </div>
       
       <div className="flex-1 flex flex-col min-w-0">
-        <header className={`h-16 bg-white border-b border-gray-200 px-4 lg:px-6 flex items-center justify-between shrink-0 ${!isStandalone ? 'mt-14 lg:mt-0' : ''}`}>
+        <header className={`h-16 bg-white border-b border-gray-200 px-4 lg:px-6 flex items-center justify-between shrink-0 ${!isStandalone ? 'mt-[72px] lg:mt-0' : ''}`}>
           <div className="flex items-center gap-3">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
               <i className="fas fa-bars"></i>
             </button>
             <div className="flex items-center gap-2">
-              {!isOnline ? (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold uppercase rounded-full border border-amber-200">
-                  <i className="fas fa-wifi-slash"></i> Offline Mode
-                </span>
-              ) : isSynced ? (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase rounded-full border border-emerald-200">
-                  <i className="fas fa-check-circle"></i> Device Synced
-                </span>
-              ) : null}
+              <h1 className="font-bold text-gray-800 lg:hidden text-sm truncate">
+                {selectedHospitalId === 'all' ? 'MedTrack Pro' : hospitals.find(h => h.id === selectedHospitalId)?.name}
+              </h1>
+              {!isOnline && (
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black uppercase rounded-full">Offline</span>
+              )}
             </div>
           </div>
           <Header 
             searchQuery={searchQuery} 
             onSearchChange={setSearchQuery} 
             onAddVisit={() => { setEditingVisit(null); setIsVisitModalOpen(true); }} 
-            onExport={() => alert("CSV Exported")}
+            onExport={() => alert("Data saved to local storage.")}
           />
         </header>
         
         <main className="flex-1 p-3 lg:p-6 overflow-auto">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
-              <h2 className="text-sm font-bold text-gray-600 uppercase tracking-widest">
-                {selectedHospitalId === 'all' ? 'Database View' : hospitals.find(h => h.id === selectedHospitalId)?.name}
-              </h2>
-            </div>
             <VisitTable 
               visits={filteredVisits} 
               hospitals={hospitals} 
@@ -270,10 +216,10 @@ const App: React.FC = () => {
       />
       <HospitalModal isOpen={isHospitalModalOpen} onClose={() => setIsHospitalModalOpen(false)} onSave={(h) => setHospitals(p => [...p, h])} />
 
-      {/* Mobile Add FAB */}
+      {/* Mobile Floating Action Button */}
       <button 
         onClick={() => { setEditingVisit(null); setIsVisitModalOpen(true); }} 
-        className="lg:hidden fixed bottom-6 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center text-2xl z-30 active:scale-90 transition-transform ring-4 ring-indigo-50"
+        className="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center text-xl z-30 active:scale-90 transition-transform"
       >
         <i className="fas fa-plus"></i>
       </button>
