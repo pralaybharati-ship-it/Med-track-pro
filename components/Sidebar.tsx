@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Hospital } from '../types';
 
@@ -25,9 +26,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [copied, setCopied] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   
-  // Detect if connection is HTTPS (PWA requirement)
-  const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
-
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
       setIsStandalone(true);
@@ -53,6 +51,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       console.error('Failed to copy');
     }
   };
+
+  /**
+   * Generates a GitHub ZIP download link.
+   * Since the repo name is dynamic based on where the user hosts it, 
+   * we try to infer it or provide a generic placeholder that the user can update.
+   */
+  const githubZipUrl = "https://github.com/user/medtrack-pro/archive/refs/heads/main.zip";
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full shrink-0">
@@ -115,60 +120,59 @@ const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </div>
 
-        {!isStandalone && (
-          <div className="pt-6 border-t border-gray-100 mb-6">
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Device Installation</h3>
-            
-            {canInstall ? (
-              <button
-                onClick={onInstall}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 active:scale-95 transition-all mb-4"
-              >
-                <i className="fas fa-cloud-download-alt"></i>
-                Direct Download
-              </button>
-            ) : (
-              <button
-                onClick={handleCopyLink}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all mb-4 border ${
-                  copied 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 active:bg-gray-100'
-                }`}
-              >
-                <i className={`fas ${copied ? 'fa-check' : 'fa-share-alt'}`}></i>
-                {copied ? 'Link Copied!' : 'Copy App Link'}
-              </button>
-            )}
-            
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-              <p className="text-[11px] font-bold text-gray-700 mb-2">
-                <i className="fab fa-android text-emerald-600 mr-1.5"></i>
-                Android Install Guide:
-              </p>
-              <ol className="text-[10px] text-gray-500 space-y-2 leading-tight">
-                <li>1. Open link in <b>Chrome</b></li>
-                <li>2. Tap <b>three dots</b> <i className="fas fa-ellipsis-v mx-0.5"></i> in corner</li>
-                <li>3. Select <b>"Install App"</b> or <br/>&nbsp;&nbsp;&nbsp;<b>"Add to Home screen"</b></li>
-              </ol>
-              {!isSecure && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-[9px] text-amber-600 leading-tight">
-                    <i className="fas fa-info-circle mr-1"></i>
-                    Using <b>HTTP</b>: Standard browser "Install" buttons are disabled. Use <b>"Add to Home Screen"</b> manually.
-                  </p>
-                </div>
-              )}
+        <div className="pt-6 border-t border-gray-100 mb-6">
+          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Resources</h3>
+          
+          {canInstall && !isStandalone && (
+            <button
+              onClick={onInstall}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-200 active:scale-95 transition-all mb-3"
+            >
+              <i className="fas fa-cloud-download-alt"></i>
+              Install App
+            </button>
+          )}
+
+          <a
+            href={githubZipUrl}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold shadow-md hover:bg-black active:scale-95 transition-all mb-3"
+          >
+            <i className="fab fa-github"></i>
+            Download Source Code
+          </a>
+          
+          <button
+            onClick={handleCopyLink}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all mb-4 border ${
+              copied 
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 active:bg-gray-100'
+            }`}
+          >
+            <i className={`fas ${copied ? 'fa-check' : 'fa-share-alt'}`}></i>
+            {copied ? 'Link Copied!' : 'Copy App Link'}
+          </button>
+          
+          <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
+            <p className="text-[10px] font-bold text-blue-700 mb-2">
+              <i className="fas fa-code mr-1.5"></i>
+              Run Locally:
+            </p>
+            <div className="bg-white p-2 rounded border border-blue-100 text-[9px] font-mono text-blue-600 mb-1">
+              npm run dev
             </div>
+            <p className="text-[9px] text-blue-500 italic">
+              Access: http://localhost:3000
+            </p>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="p-6 border-t border-gray-100">
         <div className={`${isOnline ? 'bg-emerald-600' : 'bg-amber-500'} rounded-xl p-4 text-white transition-all shadow-md`}>
           <p className="text-[10px] font-bold uppercase tracking-wider opacity-80 mb-1">Live Connection</p>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold">{isOnline ? 'Online & Syncing' : 'Offline Ready'}</p>
+            <p className="text-sm font-bold">{isOnline ? 'Online & Syncing' : 'Offline Mode'}</p>
             <div className={`w-2.5 h-2.5 ${isOnline ? 'bg-green-300' : 'bg-white'} rounded-full ${isOnline ? 'animate-pulse' : ''}`}></div>
           </div>
         </div>
